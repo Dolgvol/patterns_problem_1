@@ -11,32 +11,83 @@ London,8673713,1572,5431,United Kingdom
 New York City,8537673,784,10892,United States
 Bangkok,8280925,1569,5279,Thailand`;
 
-const createLines = (data) => {
-    return data.split('\n');
+const DATA_CONFIG = {
+    'city': {
+        index: 0,
+        type: 'string',
+    },
+    'population': {
+        index: 1,
+        type: 'number',
+    },
+    'area': {
+        index: 2,
+        type: 'number',
+    },
+    'density': {
+        index: 3,
+        type: 'number',
+    },
+    'country': {
+        index: 4,
+        type: 'string',
+    },
+    'relDensity': {
+        index: 5,
+        type: 'number',
+    },
+}
+
+const ROW_RENDER_CONFIG = [
+    { length: 18, pad: 'end' },
+    { length: 10, pad: 'start' },
+    { length: 8, pad: 'start' },
+    { length: 8, pad: 'start' },
+    { length: 18, pad: 'start' },
+    { length: 6, pad: 'start' },
+];
+
+const createLines = (data, separator='\n', headerLines=1) => {
+    return data.split(separator).slice(headerLines);
 };
 
-const createDataConfig = (lines) => {
-    return new Map([...lines[0].split(',').map((col, i) => [col, i]), ['relDensity', 5]]);
+const createTable = (lines, dataConfig, separator=',') => {
+    return lines.map(line => {
+        const cells = line.split(separator);
+        return {
+            city: cells[dataConfig.city.index]?.trim() || '',
+            population: parseFloat(cells[dataConfig.population.index]) || 0,
+            area: parseFloat(cells[dataConfig.area.index]) || 0,
+            density: parseFloat(cells[dataConfig.density.index]) || 0,
+            country: cells[dataConfig.country.index]?.trim() || '',
+            relDensity: 0,
+        }
+    });
 };
 
-const createSortedTable = (lines, dataConfig) => {
-    return lines.slice(1, -1)
-        .map(line => line.split(','))
-        .sort((row1, row2) => row2[dataConfig.get('density')] - row1[dataConfig.get('density')]);
+const makeSortedTable = (table, sortingColumn, sortingMethod = 'desc') => {
+    const compareFunctions = {
+        asc: (a, b) => (a > b) - (a < b),
+        desc: (a, b) => (b > a) - (b < a)
+    };
+    return table.toSorted((row1, row2) => compareFunctions[sortingMethod](row1[sortingColumn], row2[sortingColumn]));
 };
 
-const addRelDensity = (table, dataConfig) => {
-    const maxDensity = table[0][dataConfig.get('density')];
+const makeUpdatedTable = (table, parentColumn) => {
+    const maxDensity = table[0][parentColumn];
     return table.map(row => {
-        const relDensityValue = (Math.round((row[dataConfig.get('density')] * 100) / maxDensity)).toString();        
-        return [...row, relDensityValue];
+        row.relDensity = (Math.round((row[parentColumn] * 100) / maxDensity));
+        return row;
     });
 };
 
 const renderTable = (table, rowRenderConfig) => {
     table.forEach(row => {
-        const formattedRow = row
-            .map((cell, i) => cell[rowRenderConfig[i].method](rowRenderConfig[i].length))
+        const formattedRow = Object.values(row)
+            .map((cell, i) => String(cell)[
+                    (rowRenderConfig[i].pad === 'end') && 'padEnd' || 
+                    (rowRenderConfig[i].pad === 'start') && 'padStart'
+                ](rowRenderConfig[i].length))
             .join('');
         console.log(formattedRow);
     });
@@ -44,18 +95,11 @@ const renderTable = (table, rowRenderConfig) => {
 
 const main = (data) => {
     if (!data) return;
-    const rowRenderConfig = [
-        { length: 18, method: 'padEnd' },
-        { length: 10, method: 'padStart' },
-        { length: 8, method: 'padStart' },
-        { length: 8, method: 'padStart' },
-        { length: 18, method: 'padStart' },
-        { length: 6, method: 'padStart' }
-    ];
     const lines = createLines(data);
-    const dataConfig = createDataConfig(lines);
-    const table = createSortedTable(lines, dataConfig);
-    renderTable(addRelDensity(table, dataConfig),rowRenderConfig);
+    const table = createTable(lines, DATA_CONFIG);
+    const sortedTable = makeSortedTable(table, 'density');
+    const updatedTable = makeUpdatedTable(sortedTable, 'density');
+    renderTable(updatedTable, ROW_RENDER_CONFIG);
 };
 
 main(data);

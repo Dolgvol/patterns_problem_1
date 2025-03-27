@@ -28,9 +28,9 @@ class DataHandler {
     }
 
     createSortedTable() {
-        return this.lines.slice(1, -1)
+        return this.lines.slice(1)
             .map(line => line.split(','))
-            .sort((row1, row2) => row2[this.dataConfig.get('density')] - row1[this.dataConfig.get('density')]);
+            .toSorted((row1, row2) => row2[this.dataConfig.get('density')] - row1[this.dataConfig.get('density')]);
     }
 
     addRelDensity() {
